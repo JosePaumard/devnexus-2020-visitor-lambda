@@ -5,38 +5,53 @@ import org.paumard.devnexus.model.Car;
 import org.paumard.devnexus.model.Engine;
 import org.paumard.devnexus.model.Wheel;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class HaveFunWithVisitor {
 
     public static void main(String[] args) {
 
         Car renault = new Car();
 
-        Visitor visitor = new Visitor() {
+//        VisitorInitializer<String> visitorInitializer =
+//                builder -> {
+//                    builder.register(Car.class, car -> "Visiting car: " + car);
+//                    builder.register(Body.class, body -> "Visiting body: " + body);
+//                    builder.register(Engine.class, engine -> "Visiting engine: " + engine);
+//                    builder.register(Wheel.class, wheel -> "Visiting wheel: " + wheel);
+//                };
 
-            String visited = "";
+        VisitorInitializer<String> visitorInitializer =
+                Visitor.<Car, String>forType(Car.class).execute((Car car) -> "Visiting car: " + car)
+                        .forType(Body.class).execute((Body body) -> "Visiting body: " + body)
+                        .forType(Engine.class).execute(engine -> "Visiting engine: " + engine)
+                        .forType(Wheel.class).execute(wheel -> "Visiting wheel: " + wheel);
 
-            public void visit(Car car) {
-                visited += "Visiting car: " + car;
-            }
+        Visitor<String> visitor = Visitor.of(visitorInitializer);
 
-            public void visit(Body body) {
-                visited += "Visiting body: " + body;
-            }
+        String visitedCar = visitor.visit(renault);
+        System.out.println("visitedCar = " + visitedCar);
 
-            public void visit(Engine engine) {
-                visited += "Visiting engine: " + engine;
-            }
+        String visitedBody = visitor.visit(renault.getBody());
+        System.out.println("visitedBody = " + visitedBody);
 
-            public void visit(Wheel wheel) {
-                visited += "Visiting wheel: " + wheel;
-            }
+        VisitableFactory<Car> visitableFactory =
+                VisitableFactory.forType(Car.class)
+                        .visit(
+                                car -> car,
+                                car -> car.getBody(),
+                                car -> car.getEngine(),
+                                car -> car.getWheels()[0]
+                        );
 
-            public String getVisited() {
-                return this.visited;
-            }
-        };
+        Visitable<Car> visitableRenaut = visitableFactory.makeVisitable(renault);
 
-        renault.accept(visitor);
-        System.out.println("Visited car = " + visitor.getVisited());
+        String visited1 = visitableRenaut.accept(visitor, Collectors.joining("\n"));
+        System.out.println("Visited car = " + visited1);
+
+        List<String> visited2 = visitableRenaut.accept(visitor, Collectors.toList());
+        System.out.println("Visited car = " + visited2);
     }
+
 }

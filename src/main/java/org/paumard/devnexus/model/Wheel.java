@@ -4,9 +4,10 @@ import org.paumard.devnexus.Visitor;
 
 public class Wheel {
 
-    public void accept(Visitor visitor) {
-        visitor.visit(this);
-    }
+//    public <R> R accept(Visitor<R> visitor) {
+//        return visitor.visit(this);
+//    }
+
 
     @Override
     public String toString() {

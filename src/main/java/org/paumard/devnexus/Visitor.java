@@ -1,17 +1,64 @@
 package org.paumard.devnexus;
 
-import org.paumard.devnexus.model.Body;
-import org.paumard.devnexus.model.Car;
-import org.paumard.devnexus.model.Engine;
-import org.paumard.devnexus.model.Wheel;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
-public interface Visitor {
+@FunctionalInterface
+public interface Visitor<R> {
 
-    void visit(Car car);
+    R visit(Object o);
 
-    void visit(Body body);
+    public static <R> Visitor<R> of(VisitorInitializer<R> visitorInitializer) {
+        Map<Class<?>, Function<Object, R>> registry = new HashMap<>();
+        visitorInitializer.init(registry::put);
+        return o -> registry.get(o.getClass()).apply(o);
+    }
 
-    void visit(Engine engine);
+    public static <T, R> X<T, R> forType(Class<T> type) {
+        return () -> type;
+    }
 
-    void visit(Wheel wheel);
+    @FunctionalInterface
+    interface X<T, R> {
+
+        Class<T> type();
+
+        default Y<R> execute(Function<T, R> function) {
+            return visitorBuilder -> visitorBuilder.register(type(), function.compose(type()::cast));
+        }
+    }
+
+    @FunctionalInterface
+    interface Y<R> extends VisitorInitializer<R> {
+
+        default <T> Z<T, R> forType(Class<T> type) {
+            return index -> index == 0 ? type : this;
+        }
+
+        default Y<R> andThen(Y<R> after) {
+            return visitorBuilder -> { this.accept(visitorBuilder); after.accept(visitorBuilder);};
+        }
+    }
+
+    @FunctionalInterface
+    interface Z<T, R> {
+
+        Object get(int index);
+
+        default Y<R> previousInitializer() {
+            return (Y<R>)get(1);
+        }
+
+        default Class<T> type() {
+            return (Class<T>)get(0);
+        }
+
+        default Y<R> execute(Function<T, R> function) {
+            return previousInitializer()
+                    .andThen(
+                            visitorBuilder ->
+                                    visitorBuilder.register(type(), function.compose(type()::cast)));
+        }
+    }
 }
